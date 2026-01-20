@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>StemSplit</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<style>
+/* ===== GLOBAL ===== */
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+}
+
+body {
+  background:
+    radial-gradient(1200px at 50% -200px, #243b55 0%, transparent 60%),
+    linear-gradient(#0b0f14, #06080d);
+  color: #fff;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  overflow-y: auto;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #0b0f14;
+}
+::-webkit-scrollbar-thumb {
+  background: #2b3a55;
+  border-radius: 6px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3b4f73;
+}
+
+/* ===== LAYOUT ===== */
+.page {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 80px 20px 120px;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.header h1 {
+  font-size: 34px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.header p {
+  color: #9fb3c8;
+  font-size: 15px;
+}
+
+/* ===== CARD ===== */
+.card {
+  background: rgba(18, 24, 38, 0.85);
+  backdrop-filter: blur(14px);
+  border-radius: 22px;
+  padding: 32px;
+  box-shadow:
+    0 40px 80px rgba(0,0,0,0.6),
+    inset 0 0 0 1px rgba(255,255,255,0.04);
+}
+
+/* ===== UPLOAD ===== */
+input[type="file"] {
+  width: 100%;
+  margin-top: 14px;
+  color: #cbd5e1;
+}
+
+/* ===== BUTTON ===== */
+button {
+  width: 100%;
+  padding: 16px;
+  margin-top: 20px;
+  border-radius: 14px;
+  border: none;
+  cursor: pointer;
+  background: linear-gradient(135deg, #4aa3ff, #2563eb);
+  color: #fff;
+  font-weight: 600;
+  font-size: 15px;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+
+button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 30px rgba(74,163,255,0.35);
+}
+
+/* ===== PROGRESS ===== */
+#progressContainer {
+  display: none;
+  margin-top: 22px;
+}
+
+#progressText {
+  font-size: 13px;
+  margin-bottom: 8px;
+  color: #9fb3c8;
+}
+
+#progressOuter {
+  background: #1b2333;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+#progressBar {
+  height: 10px;
+  width: 0%;
+  background: linear-gradient(90deg, #4aa3ff, #60a5fa);
+  transition: width 0.4s ease;
+}
+
+/* ===== RESULTS ===== */
+ul {
+  margin-top: 26px;
+  padding-left: 0;
+  list-style: none;
+}
+
+li {
+  margin-bottom: 8px;
+}
+
+li a {
+  color: #60a5fa;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+li a:hover {
+  text-decoration: underline;
+}
+
+/* Footer spacing */
+.footer-space {
+  height: 80px;
+}
+</style>
+</head>
+
+<body>
+<div class="page">
+
+  <div class="header">
+    <h1>Extract stems instantly</h1>
+    <p>Upload a song and download vocals, drums, bass, and instruments.</p>
+  </div>
+
+  <div class="card">
+    <input type="file" id="fileInput" accept=".wav,.mp3,.flac" />
+    <button id="extractBtn">Separate Stems</button>
+
+    <div id="progressContainer">
+      <div id="progressText">Uploading…</div>
+      <div id="progressOuter">
+        <div id="progressBar"></div>
+      </div>
+    </div>
+
+    <ul id="results"></ul>
+  </div>
+
+  <div class="footer-space"></div>
+</div>
+
+<script>
+const btn = document.getElementById("extractBtn");
+const fileInput = document.getElementById("fileInput");
+const progressBar = document.getElementById("progressBar");
+const progressText = document.getElementById("progressText");
+const progressContainer = document.getElementById("progressContainer");
+const results = document.getElementById("results");
+
+btn.onclick = () => {
+  if (!fileInput.files.length) return alert("Choose a file");
+
+  const xhr = new XMLHttpRequest();
+  const data = new FormData();
+  data.append("file", fileInput.files[0]);
+
+  progressContainer.style.display = "block";
+  progressBar.style.width = "0%";
+  progressText.innerText = "Uploading…";
+  results.innerHTML = "";
+
+  xhr.upload.onprogress = e => {
+    if (e.lengthComputable) {
+      const percent = Math.round((e.loaded / e.total) * 40);
+      progressBar.style.width = percent + "%";
+    }
+  };
+
+  xhr.onload = () => {
+    progressText.innerText = "Separating stems…";
+
+    let fake = 40;
+    const interval = setInterval(() => {
+      fake += 5;
+      progressBar.style.width = fake + "%";
+      if (fake >= 90) clearInterval(interval);
+    }, 400);
+
+    const res = JSON.parse(xhr.responseText);
+
+    setTimeout(() => {
+      progressBar.style.width = "100%";
+      progressText.innerText = "Complete";
+      results.innerHTML = "<li><strong>Download stems:</strong></li>";
+
+      res.files.forEach(f => {
+        results.innerHTML += `<li><a href="${f.url}" download>${f.name}</a></li>`;
+      });
+    }, 2500);
+  };
+
+  xhr.open("POST", "/separate");
+  xhr.send(data);
+};
+</script>
+
+</body>
+</html>
+
